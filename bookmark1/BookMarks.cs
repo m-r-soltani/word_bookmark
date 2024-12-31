@@ -40,23 +40,29 @@ namespace BookMarks
 
                         if (content.StartsWith("@QRCode:"))
                         {
+
                             // QR code content starts with @QRCode: (e.g., @QRCode:some_text)
                             string qrCodeText = content.Substring(8); // Extract the QR code text
                             string qrCodeImagePath = GenerateQRCodeImage(qrCodeText); // Generate the QR code image
-
                             // Insert the generated QR code image
                             InsertImageAtBookmark(wordDoc, bookmark, qrCodeImagePath);
                         }
                         else if (File.Exists(content)) // Check if the value is an image file path
                         {
+
                             // Remove existing content (if any)
                             nextSibling?.Remove();
-
                             // Add the image
                             InsertImageAtBookmark(wordDoc, bookmark, content);
+                        } else if (content.StartsWith("@Binary:")) { // Check if the value is an image binary
+                            string thisfilepath=ProcessBinaryImage(new Dictionary<string, string> { { entry.Key, entry.Value } });
+                            if (thisfilepath != "error") {
+                                InsertImageAtBookmark(wordDoc, bookmark, thisfilepath);
+                            }
                         }
                         else // Treat the value as text
                         {
+
                             if (nextSibling != null)
                             {
                                 var textElement = nextSibling.GetFirstChild<DocumentFormat.OpenXml.Wordprocessing.Text>();
@@ -100,8 +106,8 @@ namespace BookMarks
             {
                 imagePart.FeedData(stream);
             }
-            const long widthEmu = 110 * 914400 / 96; // 914400 EMUs per inch, 96 DPI
-            const long heightEmu = 60 * 914400 / 96;
+            const long widthEmu = 120 * 914400 / 96; // 914400 EMUs per inch, 96 DPI
+            const long heightEmu = 70 * 914400 / 96;
             Console.WriteLine($"Image inserted with ID: {mainPart.GetIdOfPart(imagePart)}"); // Debug info
 
             var (width, height) = GetImageDimensions(imagePath, 5000000, 5000000);
@@ -265,57 +271,60 @@ namespace BookMarks
 
         public static byte[] GetImageDataFromDatabase(string userName)
         {
-            string connectionString = "Server=.;Database=CenteralUserInfo;User Id=sa;Password=Aa@12345;";
+            string connectionString = "Server=localhost;Database=CenteralUserInfo;User Id=sa;Password=Aa@12345;";
             string query = "SELECT FIRST_SIGNATURE FROM CenteralUserInfo.dbo.Pargar_USER_SIGN WHERE USER_NAME = @UserName";
 
             try
             {
                 using (SqlConnection connection = new SqlConnection(connectionString))
-                using (SqlCommand command = new SqlCommand(query, connection))
                 {
-                    command.Parameters.AddWithValue("@UserName", userName);
-                    connection.Open();
 
-                    var result = command.ExecuteScalar();
-
-                    if (result == null || result == DBNull.Value)
+                    using (SqlCommand command = new SqlCommand(query, connection))
                     {
-                        Console.WriteLine($"No data found for user: {userName}");
-                        return null;
-                    }
+                        command.Parameters.AddWithValue("@UserName", userName);
+                        connection.Open();
 
-                    if (result is string hexString)
-                    {
-                        Console.WriteLine($"Hex string data retrieved for user: {userName}");
+                        var result = command.ExecuteScalar();
 
-                        try
+                        if (result == null || result == DBNull.Value)
                         {
-                            return ConvertHexStringToByteArray(hexString);
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"Error converting hex string to byte array: {ex.Message}");
+                            Console.WriteLine($"No data found for user: {userName}");
                             return null;
                         }
-                    }
 
-                    if(result is byte[] byteArray)
-                    {
-                        Console.WriteLine($"Binary data retrieved for user: {userName}");
-                        return byteArray;
-                    }
+                        if (result is string hexString)
+                        {
+                            Console.WriteLine($"Hex string data retrieved for user: {userName}");
 
-                    if (result is string base64String) // Check if the data is a string
-                    {
-                        Console.WriteLine($"Base64 string data retrieved for user: {userName}");
-                        return Convert.FromBase64String(base64String); // Decode Base64 string to binary
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Unexpected data type for user: {userName}. Data type: {result.GetType()}");
-                        return null;
-                    }
+                            try
+                            {
+                                return ConvertHexStringToByteArray(hexString);
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"Error converting hex string to byte array: {ex.Message}");
+                                return null;
+                            }
+                        }
 
+                        if (result is byte[] byteArray)
+                        {
+                            Console.WriteLine($"Binary data retrieved for user: {userName}");
+                            return byteArray;
+                        }
+
+                        if (result is string base64String) // Check if the data is a string
+                        {
+                            Console.WriteLine($"Base64 string data retrieved for user: {userName}");
+                            return Convert.FromBase64String(base64String); // Decode Base64 string to binary
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Unexpected data type for user: {userName}. Data type: {result.GetType()}");
+                            return null;
+                        }
+
+                    }
                 }
             }
             catch (Exception ex)
@@ -324,28 +333,27 @@ namespace BookMarks
                 return null;
             }
         }
-        
-        public static void ProcessBinaryImages(Dictionary<string, string> bookmarksContent)
-        {
-            foreach (var key in bookmarksContent.Keys.ToList())
-            {
-                if (bookmarksContent[key].StartsWith("@Binary:"))
-                {
-                    string userName = bookmarksContent[key].Substring(8); // Extract user name
-                    byte[] imageData = GetImageDataFromDatabase(userName); // Fetch binary data
 
-                    if (imageData != null)
-                    {
-                        string tempFilePath = SaveImageToTempFile(imageData);
-                        Console.WriteLine($"Temporary file created at: {tempFilePath}"); // Debug info
-                        bookmarksContent[key] = tempFilePath; // Replace marker with temp file path
-                    }
-                    else
-                    {
-                        Console.WriteLine($"No image data found for user: {userName}");
-                        bookmarksContent[key] = string.Empty; // Clear the marker if no data found
-                    }
+        public static string ProcessBinaryImage(Dictionary<string, string> bookmarksContent)
+        {
+            var key = bookmarksContent.Keys.First(); // Get the single key
+            var value = bookmarksContent[key];
+            string userName = value.Substring(8); // Extract user name
+            byte[] imageData = GetImageDataFromDatabase(userName); // Fetch binary data
+            if (imageData != null)
+            {
+                string tempFilePath = SaveImageToTempFile(imageData);
+                Console.WriteLine($"Temporary file created at: {tempFilePath}"); // Debug info
+                if (File.Exists(tempFilePath))
+                {
+                    return tempFilePath;
                 }
+                else {
+                    return "error";
+                }
+            }
+            else {
+                return "error";
             }
         }
 

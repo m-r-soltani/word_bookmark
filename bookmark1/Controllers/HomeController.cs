@@ -29,7 +29,7 @@ namespace bookmark1.Controllers
             {
                 { "تصویر_واحد_سازمانی",  "111" },
                 { "واحد_سازمانی",  "111" },
-                { "تاریخ_خورشیدی",  "111" },
+                { "تاریخ_خورشیدی",  @"C:\mydocs\img\1.png" },
                 { "پیوست","111"  },
                 { "رونوشت","@QRCode:This is a QR code"  },
                 { "شماره_ثبت","111"  },
@@ -44,7 +44,6 @@ namespace bookmark1.Controllers
                 { "امضای_اصلی", "@Binary:6930"  },
                 { "امضای_اصلی_و_فرستنده","@Binary:6942"  },
             };
-            BookmarkOpenxml.ProcessBinaryImages(bookmarksContent);
             BookmarkOpenxml.UpdateBookmarks(docPath, bookmarksContent);
             
             //Console.WriteLine("Bookmarks updated successfully!");

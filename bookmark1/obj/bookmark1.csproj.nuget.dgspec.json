@@ -11,7 +11,7 @@
         "projectName": "bookmark1",
         "projectPath": "C:\\Users\\Administrator\\source\\repos\\word_bookmark\\bookmark1\\bookmark1.csproj",
         "packagesPath": "C:\\Users\\Administrator\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Administrator\\Source\\Repos\\word_bookmark\\bookmark1\\obj\\",
+        "outputPath": "C:\\Users\\Administrator\\source\\repos\\word_bookmark\\bookmark1\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\Administrator\\AppData\\Roaming\\NuGet\\NuGet.Config",
