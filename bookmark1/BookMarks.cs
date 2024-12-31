@@ -95,27 +95,75 @@ namespace BookMarks
         {
             if (!File.Exists(imagePath))
             {
-                Console.WriteLine($"Image file not found: {imagePath}"); // Debug info
+                Console.WriteLine($"Image file not found: {imagePath}");
                 return;
             }
 
             var mainPart = wordDoc.MainDocumentPart;
-            var imagePart = mainPart.AddImagePart(ImagePartType.Png);
+            var parentElement = bookmark.Parent;
 
+            // Add the image to the correct part (MainDocumentPart or Header/Footer)
+            ImagePart imagePart = null;
+
+            if (parentElement.Ancestors<Header>().Any())
+            {
+                var headerPart = wordDoc.MainDocumentPart.HeaderParts.FirstOrDefault(h => h.RootElement.Descendants<BookmarkStart>().Contains(bookmark));
+                if (headerPart != null)
+                {
+                    imagePart = headerPart.AddImagePart(ImagePartType.Png);
+                }
+            }
+            else if (parentElement.Ancestors<Footer>().Any())
+            {
+                var footerPart = wordDoc.MainDocumentPart.FooterParts.FirstOrDefault(f => f.RootElement.Descendants<BookmarkStart>().Contains(bookmark));
+                if (footerPart != null)
+                {
+                    imagePart = footerPart.AddImagePart(ImagePartType.Png);
+                }
+            }
+            else
+            {
+                // Default to the main document part
+                imagePart = mainPart.AddImagePart(ImagePartType.Png);
+            }
+
+            
+
+            //if (imagePart == null)
+            //{
+            //    Console.WriteLine("Could not determine the correct part to add the image.");
+            //    return;
+            //}
+
+            // Load the image data
             using (FileStream stream = new FileStream(imagePath, FileMode.Open))
             {
                 imagePart.FeedData(stream);
             }
-            const long widthEmu = 120 * 914400 / 96; // 914400 EMUs per inch, 96 DPI
-            const long heightEmu = 70 * 914400 / 96;
-            Console.WriteLine($"Image inserted with ID: {mainPart.GetIdOfPart(imagePart)}"); // Debug info
 
-            var (width, height) = GetImageDimensions(imagePath, 5000000, 5000000);
+            // Get image dimensions
             //var (width, height) = GetImageDimensions(imagePath);
-            var drawingElement = CreateImageElement(mainPart.GetIdOfPart(imagePart), widthEmu, heightEmu);
+            const long width = 120 * 914400 / 96; // 914400 EMUs per inch, 96 DPI
+            const long height = 70 * 914400 / 96;
+
+            if (imagePart == null)
+            {
+                Console.WriteLine("Failed to create image part.");
+                return;
+            }
+            else {
+                Console.WriteLine($"Image Part ID: {imagePart.Uri}");
+                Console.WriteLine($"Bookmark Parent: {bookmark.Parent}");
+
+            }
+
+            // Create the image element
+            var drawingElement = CreateImageElement(mainPart.GetIdOfPart(imagePart), width, height);
 
             var imageRun = new DocumentFormat.OpenXml.Wordprocessing.Run(drawingElement);
-            bookmark.Parent.InsertAfter(imageRun, bookmark);
+
+            // Insert the image at the bookmark
+            parentElement.InsertAfter(imageRun, bookmark);
         }
 
         private static Drawing CreateImageElement(string relationshipId, long width, long height)
@@ -209,7 +257,7 @@ namespace BookMarks
             if (bookmarks.Any())
                 return bookmarks.First();
 
-            // Search in headers and footers
+            // Search in headers
             foreach (var header in wordDoc.MainDocumentPart.HeaderParts)
             {
                 var headerBookmarks = header.RootElement.Descendants<BookmarkStart>()
@@ -217,7 +265,7 @@ namespace BookMarks
                 if (headerBookmarks.Any())
                     return headerBookmarks.First();
             }
-
+            // Search in footers
             foreach (var footer in wordDoc.MainDocumentPart.FooterParts)
             {
                 var footerBookmarks = footer.RootElement.Descendants<BookmarkStart>()
@@ -226,7 +274,7 @@ namespace BookMarks
                     return footerBookmarks.First();
             }
 
-            // Search in footnotes, endnotes, and other parts if needed
+            // Search in footnoteBookmarks
             if (wordDoc.MainDocumentPart.FootnotesPart != null)
             {
                 var footnoteBookmarks = wordDoc.MainDocumentPart.FootnotesPart.RootElement.Descendants<BookmarkStart>()
@@ -234,7 +282,7 @@ namespace BookMarks
                 if (footnoteBookmarks.Any())
                     return footnoteBookmarks.First();
             }
-
+            // Search in endnoteBookmarks
             if (wordDoc.MainDocumentPart.EndnotesPart != null)
             {
                 var endnoteBookmarks = wordDoc.MainDocumentPart.EndnotesPart.RootElement.Descendants<BookmarkStart>()
