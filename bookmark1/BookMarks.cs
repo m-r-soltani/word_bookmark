@@ -127,14 +127,6 @@ namespace BookMarks
                 imagePart = mainPart.AddImagePart(ImagePartType.Png);
             }
 
-            
-
-            //if (imagePart == null)
-            //{
-            //    Console.WriteLine("Could not determine the correct part to add the image.");
-            //    return;
-            //}
-
             // Load the image data
             using (FileStream stream = new FileStream(imagePath, FileMode.Open))
             {
@@ -142,20 +134,8 @@ namespace BookMarks
             }
 
             // Get image dimensions
-            //var (width, height) = GetImageDimensions(imagePath);
-            const long width = 120 * 914400 / 96; // 914400 EMUs per inch, 96 DPI
+            const long width = 120 * 914400 / 96;
             const long height = 70 * 914400 / 96;
-
-            if (imagePart == null)
-            {
-                Console.WriteLine("Failed to create image part.");
-                return;
-            }
-            else {
-                Console.WriteLine($"Image Part ID: {imagePart.Uri}");
-                Console.WriteLine($"Bookmark Parent: {bookmark.Parent}");
-
-            }
 
             // Create the image element
             var drawingElement = CreateImageElement(mainPart.GetIdOfPart(imagePart), width, height);
@@ -219,33 +199,6 @@ namespace BookMarks
                     DistanceFromRight = (UInt32Value)0U,
                     EditId = "50D07946"
                 });
-        }
-
-        private static (long width, long height) GetImageDimensions(string imagePath, long maxWidthEmu = 3000000, long maxHeightEmu = 3000000)
-        {
-            using (var image = SixLabors.ImageSharp.Image.Load(imagePath))
-            {
-                const int emusPerInch = 914400; // Conversion factor
-
-                var dpiX = image.Metadata.HorizontalResolution > 0 ? image.Metadata.HorizontalResolution : 96; // Default DPI
-                var dpiY = image.Metadata.VerticalResolution > 0 ? image.Metadata.VerticalResolution : 96;
-
-                var widthEmu = (long)(image.Width * emusPerInch / dpiX);
-                var heightEmu = (long)(image.Height * emusPerInch / dpiY);
-
-                // Scale to fit within max dimensions
-                if (widthEmu > maxWidthEmu || heightEmu > maxHeightEmu)
-                {
-                    double widthScale = (double)maxWidthEmu / widthEmu;
-                    double heightScale = (double)maxHeightEmu / heightEmu;
-                    double scale = Math.Min(widthScale, heightScale);
-
-                    widthEmu = (long)(widthEmu * scale);
-                    heightEmu = (long)(heightEmu * scale);
-                }
-
-                return (widthEmu, heightEmu);
-            }
         }
 
         public static BookmarkStart FindBookmark(WordprocessingDocument wordDoc, string bookmarkName)
@@ -438,6 +391,37 @@ namespace BookMarks
         }
 
 
+
+
+
+
+
+        //private static (long width, long height) GetImageDimensions(string imagePath, long maxWidthEmu = 3000000, long maxHeightEmu = 3000000)
+        //{
+        //    using (var image = SixLabors.ImageSharp.Image.Load(imagePath))
+        //    {
+        //        const int emusPerInch = 914400; // Conversion factor
+
+        //        var dpiX = image.Metadata.HorizontalResolution > 0 ? image.Metadata.HorizontalResolution : 96; // Default DPI
+        //        var dpiY = image.Metadata.VerticalResolution > 0 ? image.Metadata.VerticalResolution : 96;
+
+        //        var widthEmu = (long)(image.Width * emusPerInch / dpiX);
+        //        var heightEmu = (long)(image.Height * emusPerInch / dpiY);
+
+        //        // Scale to fit within max dimensions
+        //        if (widthEmu > maxWidthEmu || heightEmu > maxHeightEmu)
+        //        {
+        //            double widthScale = (double)maxWidthEmu / widthEmu;
+        //            double heightScale = (double)maxHeightEmu / heightEmu;
+        //            double scale = Math.Min(widthScale, heightScale);
+
+        //            widthEmu = (long)(widthEmu * scale);
+        //            heightEmu = (long)(heightEmu * scale);
+        //        }
+
+        //        return (widthEmu, heightEmu);
+        //    }
+        //}
 
         //without qrcode
         /*
