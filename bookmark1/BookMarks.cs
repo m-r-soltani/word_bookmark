@@ -17,13 +17,10 @@ using System.Xml.Linq;
 using Microsoft.Extensions.Configuration;
 using QRCoder;
 
-
 namespace BookMarks
 {
     public class BookmarkOpenxml
     {
-
-
         public static void UpdateBookmarks(string filePath, Dictionary<string, string> bookmarksContent)
         {
             using (WordprocessingDocument wordDoc = WordprocessingDocument.Open(filePath, true))
@@ -103,12 +100,13 @@ namespace BookMarks
             {
                 imagePart.FeedData(stream);
             }
-
+            const long widthEmu = 110 * 914400 / 96; // 914400 EMUs per inch, 96 DPI
+            const long heightEmu = 60 * 914400 / 96;
             Console.WriteLine($"Image inserted with ID: {mainPart.GetIdOfPart(imagePart)}"); // Debug info
 
             var (width, height) = GetImageDimensions(imagePath, 5000000, 5000000);
             //var (width, height) = GetImageDimensions(imagePath);
-            var drawingElement = CreateImageElement(mainPart.GetIdOfPart(imagePart), width, height);
+            var drawingElement = CreateImageElement(mainPart.GetIdOfPart(imagePart), widthEmu, heightEmu);
 
             var imageRun = new DocumentFormat.OpenXml.Wordprocessing.Run(drawingElement);
             bookmark.Parent.InsertAfter(imageRun, bookmark);
@@ -267,8 +265,8 @@ namespace BookMarks
 
         public static byte[] GetImageDataFromDatabase(string userName)
         {
-            string connectionString = "Server=.;Database=CentralUserInfo;User Id=sa;Password=Aa@12345;";
-            string query = "SELECT FIRST_SIGNATURE FROM CentralUserInfo.dbo.users WHERE user_name = @UserName";
+            string connectionString = "Server=.;Database=CenteralUserInfo;User Id=sa;Password=Aa@12345;";
+            string query = "SELECT FIRST_SIGNATURE FROM CenteralUserInfo.dbo.Pargar_USER_SIGN WHERE USER_NAME = @UserName";
 
             try
             {
@@ -300,11 +298,24 @@ namespace BookMarks
                             return null;
                         }
                     }
+
+                    if(result is byte[] byteArray)
+                    {
+                        Console.WriteLine($"Binary data retrieved for user: {userName}");
+                        return byteArray;
+                    }
+
+                    if (result is string base64String) // Check if the data is a string
+                    {
+                        Console.WriteLine($"Base64 string data retrieved for user: {userName}");
+                        return Convert.FromBase64String(base64String); // Decode Base64 string to binary
+                    }
                     else
                     {
                         Console.WriteLine($"Unexpected data type for user: {userName}. Data type: {result.GetType()}");
                         return null;
                     }
+
                 }
             }
             catch (Exception ex)

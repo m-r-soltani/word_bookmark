@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using bookmark1.Models;
 using BookMarks;
 using Microsoft.AspNetCore.Mvc;
@@ -27,9 +27,22 @@ namespace bookmark1.Controllers
             string docPath = @"C:\mydocs\f1.docx";
             var bookmarksContent = new Dictionary<string, string>
             {
-                { "Bookmark1", "123123123" },
-                { "Bookmark2", "@Binary:111" },
-                //{ "Bookmark3", "@QRCode:This is a QR code" },
+                { "تصویر_واحد_سازمانی",  "111" },
+                { "واحد_سازمانی",  "111" },
+                { "تاریخ_خورشیدی",  "111" },
+                { "پیوست","111"  },
+                { "رونوشت","@QRCode:This is a QR code"  },
+                { "شماره_ثبت","111"  },
+                { "طبقه_بندی","@Binary:6942"  },
+                { "عنوان_محترمانه_کامل_گیرندگان_اصلی", "111"  },
+                { "عنوان_محترمانه_کامل_گیرندگان_رونوشت","111"  },
+                { "فوریت","111"  },
+                { "نام_و_نام_خانوادگی_فرستنده","111"  },
+                { "آدرس_جایگاه_فرستنده","@Binary:6930"  },
+                { "اهمیت_","111"  },
+                { "بارکد_شمس","@QRCode:This is a QR code"  },
+                { "امضای_اصلی", "@Binary:6930"  },
+                { "امضای_اصلی_و_فرستنده","@Binary:6942"  },
             };
             BookmarkOpenxml.ProcessBinaryImages(bookmarksContent);
             BookmarkOpenxml.UpdateBookmarks(docPath, bookmarksContent);
