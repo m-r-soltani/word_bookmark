@@ -21,6 +21,76 @@ namespace BookMarks
 {
     public class BookmarkOpenxml
     {
+        /*
+        public static void UpdateBookmarks2(string filePath, Dictionary<string, string> bookmarksContent)
+        {
+            using (WordprocessingDocument wordDoc = WordprocessingDocument.Open(filePath, true))
+            {
+                foreach (var entry in bookmarksContent)
+                {
+                    string bookmarkName = entry.Key;
+                    string content = entry.Value;
+
+                    // Find the bookmark
+                    var bookmark = FindBookmark(wordDoc, bookmarkName);
+
+                    if (bookmark != null)
+                    {
+                        var nextSibling = bookmark.NextSibling<DocumentFormat.OpenXml.Wordprocessing.Run>();
+
+                        if (content.StartsWith("@QRCode:"))
+                        {
+                            // Handle QR code content
+                            string qrCodeText = content.Substring(8); // Extract the QR code text
+                            string qrCodeImagePath = GenerateQRCodeImage(qrCodeText); // Generate the QR code image
+                            InsertImageAtBookmark(wordDoc, bookmark, qrCodeImagePath);
+                        }
+                        else if (File.Exists(content)) // Check if the value is an image file path
+                        {
+                            // Remove existing content (if any)
+                            nextSibling?.Remove();
+                            InsertImageAtBookmark(wordDoc, bookmark, content);
+                        }
+                        else if (content.StartsWith("@Binary:")) // Handle binary images
+                        {
+                            string thisFilePath = ProcessBinaryImage(new Dictionary<string, string> { { entry.Key, entry.Value } });
+                            if (thisFilePath != "error")
+                            {
+                                InsertImageAtBookmark(wordDoc, bookmark, thisFilePath);
+                            }
+                        }
+                        else // Treat the value as text
+                        {
+                            if (nextSibling != null)
+                            {
+                                nextSibling.Remove(); // Remove the existing `Run`
+                            }
+
+                            // Split the content by line breaks and add a `Run` for each line
+                            var newRun = new DocumentFormat.OpenXml.Wordprocessing.Run();
+                            foreach (var line in content.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None))
+                            {
+                                newRun.AppendChild(new DocumentFormat.OpenXml.Wordprocessing.Text(line));
+                                newRun.AppendChild(new DocumentFormat.OpenXml.Wordprocessing.Break());
+                            }
+
+                            // Remove the last `Break` to avoid an extra blank line
+                            newRun.LastChild?.Remove();
+
+                            bookmark.Parent.InsertAfter(newRun, bookmark);
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Bookmark '{bookmarkName}' not found in the document.");
+                    }
+                }
+
+                // Save the document after updating all bookmarks
+                wordDoc.MainDocumentPart.Document.Save();
+            }
+        }
+*/
         public static void UpdateBookmarks(string filePath, Dictionary<string, string> bookmarksContent)
         {
             using (WordprocessingDocument wordDoc = WordprocessingDocument.Open(filePath, true))
@@ -44,15 +114,12 @@ namespace BookMarks
                             // QR code content starts with @QRCode: (e.g., @QRCode:some_text)
                             string qrCodeText = content.Substring(8); // Extract the QR code text
                             string qrCodeImagePath = GenerateQRCodeImage(qrCodeText); // Generate the QR code image
-                            // Insert the generated QR code image
                             InsertImageAtBookmark(wordDoc, bookmark, qrCodeImagePath);
                         }
                         else if (File.Exists(content)) // Check if the value is an image file path
                         {
-
                             // Remove existing content (if any)
                             nextSibling?.Remove();
-                            // Add the image
                             InsertImageAtBookmark(wordDoc, bookmark, content);
                         } else if (content.StartsWith("@Binary:")) { // Check if the value is an image binary
                             string thisfilepath=ProcessBinaryImage(new Dictionary<string, string> { { entry.Key, entry.Value } });
@@ -90,7 +157,7 @@ namespace BookMarks
                 wordDoc.MainDocumentPart.Document.Save();
             }
         }
-
+        
         private static void InsertImageAtBookmark(WordprocessingDocument wordDoc, BookmarkStart bookmark, string imagePath)
         {
             if (!File.Exists(imagePath))
