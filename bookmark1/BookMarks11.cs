@@ -16,151 +16,13 @@ using System.Security.Cryptography.Xml;
 using System.Xml.Linq;
 using Microsoft.Extensions.Configuration;
 using QRCoder;
-using System.Linq;
+using System.Drawing.Imaging;
 
 namespace BookMarks
 {
-    public class BookmarkOpenxml
+    public class BookmarkOpenxml11
     {
-        private static void EmptyBookmark(WordprocessingDocument wordDoc, BookmarkStart bookmarkStart, BookmarkEnd bookmarkEnd) {
-            // Manually iterate siblings to collect elements between BookmarkStart and BookmarkEnd
-            var elementsToRemove = new List<OpenXmlElement>();
-            for (var currentElement = bookmarkStart.NextSibling(); currentElement != null && currentElement != bookmarkEnd; currentElement = currentElement.NextSibling())
-            {
-                elementsToRemove.Add(currentElement);
-            }
-
-            // Remove the collected elements
-            foreach (var element in elementsToRemove)
-            {
-                element.Remove();
-            }
-        }
-
-        public static BookmarkStart FindBookmark(WordprocessingDocument wordDoc, string bookmarkName)
-        {
-            // Search bookmarks in the main document body
-            var bookmarks = wordDoc.MainDocumentPart.Document.Descendants<BookmarkStart>()
-                .Where(b => b.Name == bookmarkName);
-
-            if (bookmarks.Any())
-                return bookmarks.First();
-
-            // Search in headers
-            foreach (var header in wordDoc.MainDocumentPart.HeaderParts)
-            {
-                var headerBookmarks = header.RootElement.Descendants<BookmarkStart>()
-                    .Where(b => b.Name == bookmarkName);
-                if (headerBookmarks.Any())
-                    return headerBookmarks.First();
-            }
-            // Search in footers
-            foreach (var footer in wordDoc.MainDocumentPart.FooterParts)
-            {
-                var footerBookmarks = footer.RootElement.Descendants<BookmarkStart>()
-                    .Where(b => b.Name == bookmarkName);
-                if (footerBookmarks.Any())
-                    return footerBookmarks.First();
-            }
-
-            // Search in footnoteBookmarks
-            if (wordDoc.MainDocumentPart.FootnotesPart != null)
-            {
-                var footnoteBookmarks = wordDoc.MainDocumentPart.FootnotesPart.RootElement.Descendants<BookmarkStart>()
-                    .Where(b => b.Name == bookmarkName);
-                if (footnoteBookmarks.Any())
-                    return footnoteBookmarks.First();
-            }
-            // Search in endnoteBookmarks
-            if (wordDoc.MainDocumentPart.EndnotesPart != null)
-            {
-                var endnoteBookmarks = wordDoc.MainDocumentPart.EndnotesPart.RootElement.Descendants<BookmarkStart>()
-                    .Where(b => b.Name == bookmarkName);
-                if (endnoteBookmarks.Any())
-                    return endnoteBookmarks.First();
-            }
-
-            // If not found, return null
-            return null;
-        }
-
-        public static void UpdateBookmarks(string filePath, Dictionary<string, string> bookmarksContent)
-        {
-            using (WordprocessingDocument wordDoc = WordprocessingDocument.Open(filePath, true))
-            {
-                foreach (var entry in bookmarksContent)
-                {
-                    string bookmarkName = entry.Key;
-                    string content = entry.Value;
-
-                    // Find the bookmark (this will give you the BookmarkStart)
-                    var bookmarkStart = FindBookmark(wordDoc, bookmarkName);
-
-                    if (bookmarkStart != null)
-                    {
-                        // Find the corresponding BookmarkEnd using the same Id
-                        var bookmarkEnd = wordDoc.MainDocumentPart.Document.Body
-                            .Descendants<BookmarkEnd>()
-                            .FirstOrDefault(be => be.Id == bookmarkStart.Id);
-
-                        if (bookmarkEnd != null)
-                        {
-                            // Remove content between BookmarkStart and BookmarkEnd
-                            var elementsToRemove = new List<OpenXmlElement>();
-                            for (var currentElement = bookmarkStart.NextSibling(); currentElement != null && currentElement != bookmarkEnd; currentElement = currentElement.NextSibling())
-                            {
-                                elementsToRemove.Add(currentElement);
-                            }
-
-                            // Remove the elements found between BookmarkStart and BookmarkEnd
-                            foreach (var element in elementsToRemove)
-                            {
-                                element.Remove();
-                            }
-
-                            // Insert new content (text or image) at the bookmark
-                            if (content.StartsWith("@QRCode:"))
-                            {
-                                string qrCodeText = content.Substring(8);
-                                string qrCodeImagePath = GenerateQRCodeImage(qrCodeText);
-                                InsertImageAtBookmark(wordDoc, bookmarkStart, qrCodeImagePath);
-                            }
-                            else if (File.Exists(content))
-                            {
-                                InsertImageAtBookmark(wordDoc, bookmarkStart, content);
-                            }
-                            else if (content.StartsWith("@Binary:"))
-                            {
-                                string binaryFilePath = ProcessBinaryImage(new Dictionary<string, string> { { entry.Key, entry.Value } });
-                                if (binaryFilePath != "error")
-                                {
-                                    InsertImageAtBookmark(wordDoc, bookmarkStart, binaryFilePath);
-                                }
-                            }
-                            else
-                            {
-                                // Insert new text at the bookmark
-                                var newRun = new DocumentFormat.OpenXml.Wordprocessing.Run(new DocumentFormat.OpenXml.Wordprocessing.Text(content));
-                                bookmarkStart.Parent.InsertAfter(newRun, bookmarkStart);
-                            }
-                        }
-                        else
-                        {
-                            Console.WriteLine($"BookmarkEnd for '{bookmarkName}' not found.");
-                        }
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Bookmark '{bookmarkName}' not found in the document.");
-                    }
-                }
-
-                // Save the document after updating all bookmarks
-                wordDoc.MainDocumentPart.Document.Save();
-            }
-        }
-
-        /*before any changes
+        /*
         public static void UpdateBookmarks(string filePath, Dictionary<string, string> bookmarksContent)
         {
             using (WordprocessingDocument wordDoc = WordprocessingDocument.Open(filePath, true))
@@ -180,26 +42,22 @@ namespace BookMarks
 
                         if (content.StartsWith("@QRCode:"))
                         {
-
                             // QR code content starts with @QRCode: (e.g., @QRCode:some_text)
                             string qrCodeText = content.Substring(8); // Extract the QR code text
                             string qrCodeImagePath = GenerateQRCodeImage(qrCodeText); // Generate the QR code image
+                            // Insert the generated QR code image
                             InsertImageAtBookmark(wordDoc, bookmark, qrCodeImagePath);
                         }
                         else if (File.Exists(content)) // Check if the value is an image file path
                         {
                             // Remove existing content (if any)
                             nextSibling?.Remove();
+
+                            // Add the image
                             InsertImageAtBookmark(wordDoc, bookmark, content);
-                        } else if (content.StartsWith("@Binary:")) { // Check if the value is an image binary
-                            string thisfilepath=ProcessBinaryImage(new Dictionary<string, string> { { entry.Key, entry.Value } });
-                            if (thisfilepath != "error") {
-                                InsertImageAtBookmark(wordDoc, bookmark, thisfilepath);
-                            }
                         }
                         else // Treat the value as text
                         {
-
                             if (nextSibling != null)
                             {
                                 var textElement = nextSibling.GetFirstChild<DocumentFormat.OpenXml.Wordprocessing.Text>();
@@ -227,61 +85,31 @@ namespace BookMarks
                 wordDoc.MainDocumentPart.Document.Save();
             }
         }
-        */
 
         private static void InsertImageAtBookmark(WordprocessingDocument wordDoc, BookmarkStart bookmark, string imagePath)
         {
             if (!File.Exists(imagePath))
             {
-                Console.WriteLine($"Image file not found: {imagePath}");
+                Console.WriteLine($"Image file not found: {imagePath}"); // Debug info
                 return;
             }
 
             var mainPart = wordDoc.MainDocumentPart;
-            var parentElement = bookmark.Parent;
+            var imagePart = mainPart.AddImagePart(ImagePartType.Png);
 
-            // Add the image to the correct part (MainDocumentPart or Header/Footer)
-            ImagePart imagePart = null;
-
-            if (parentElement.Ancestors<Header>().Any())
-            {
-                var headerPart = wordDoc.MainDocumentPart.HeaderParts.FirstOrDefault(h => h.RootElement.Descendants<BookmarkStart>().Contains(bookmark));
-                if (headerPart != null)
-                {
-                    imagePart = headerPart.AddImagePart(ImagePartType.Png);
-                }
-            }
-            else if (parentElement.Ancestors<Footer>().Any())
-            {
-                var footerPart = wordDoc.MainDocumentPart.FooterParts.FirstOrDefault(f => f.RootElement.Descendants<BookmarkStart>().Contains(bookmark));
-                if (footerPart != null)
-                {
-                    imagePart = footerPart.AddImagePart(ImagePartType.Png);
-                }
-            }
-            else
-            {
-                // Default to the main document part
-                imagePart = mainPart.AddImagePart(ImagePartType.Png);
-            }
-
-            // Load the image data
             using (FileStream stream = new FileStream(imagePath, FileMode.Open))
             {
                 imagePart.FeedData(stream);
             }
 
-            // Get image dimensions
-            const long width = 120 * 914400 / 96;
-            const long height = 70 * 914400 / 96;
+            Console.WriteLine($"Image inserted with ID: {mainPart.GetIdOfPart(imagePart)}"); // Debug info
 
-            // Create the image element
+            var (width, height) = GetImageDimensions(imagePath, 50000000, 50000000);
+            //var (width, height) = GetImageDimensions(imagePath);
             var drawingElement = CreateImageElement(mainPart.GetIdOfPart(imagePart), width, height);
 
             var imageRun = new DocumentFormat.OpenXml.Wordprocessing.Run(drawingElement);
-
-            // Insert the image at the bookmark
-            parentElement.InsertAfter(imageRun, bookmark);
+            bookmark.Parent.InsertAfter(imageRun, bookmark);
         }
 
         private static Drawing CreateImageElement(string relationshipId, long width, long height)
@@ -339,6 +167,80 @@ namespace BookMarks
                 });
         }
 
+        private static (long width, long height) GetImageDimensions(string imagePath, long maxWidthEmu = 3000000, long maxHeightEmu = 3000000)
+        {
+            using (var image = SixLabors.ImageSharp.Image.Load(imagePath))
+            {
+                const int emusPerInch = 914400; // Conversion factor
+
+                var dpiX = image.Metadata.HorizontalResolution > 0 ? image.Metadata.HorizontalResolution : 96; // Default DPI
+                var dpiY = image.Metadata.VerticalResolution > 0 ? image.Metadata.VerticalResolution : 96;
+
+                var widthEmu = (long)(image.Width * emusPerInch / dpiX);
+                var heightEmu = (long)(image.Height * emusPerInch / dpiY);
+
+                // Scale to fit within max dimensions
+                if (widthEmu > maxWidthEmu || heightEmu > maxHeightEmu)
+                {
+                    double widthScale = (double)maxWidthEmu / widthEmu;
+                    double heightScale = (double)maxHeightEmu / heightEmu;
+                    double scale = Math.Min(widthScale, heightScale);
+
+                    widthEmu = (long)(widthEmu * scale);
+                    heightEmu = (long)(heightEmu * scale);
+                }
+
+                return (widthEmu, heightEmu);
+            }
+        }
+
+        public static BookmarkStart FindBookmark(WordprocessingDocument wordDoc, string bookmarkName)
+        {
+            // Search bookmarks in the main document body
+            var bookmarks = wordDoc.MainDocumentPart.Document.Descendants<BookmarkStart>()
+                .Where(b => b.Name == bookmarkName);
+
+            if (bookmarks.Any())
+                return bookmarks.First();
+
+            // Search in headers and footers
+            foreach (var header in wordDoc.MainDocumentPart.HeaderParts)
+            {
+                var headerBookmarks = header.RootElement.Descendants<BookmarkStart>()
+                    .Where(b => b.Name == bookmarkName);
+                if (headerBookmarks.Any())
+                    return headerBookmarks.First();
+            }
+
+            foreach (var footer in wordDoc.MainDocumentPart.FooterParts)
+            {
+                var footerBookmarks = footer.RootElement.Descendants<BookmarkStart>()
+                    .Where(b => b.Name == bookmarkName);
+                if (footerBookmarks.Any())
+                    return footerBookmarks.First();
+            }
+
+            // Search in footnotes, endnotes, and other parts if needed
+            if (wordDoc.MainDocumentPart.FootnotesPart != null)
+            {
+                var footnoteBookmarks = wordDoc.MainDocumentPart.FootnotesPart.RootElement.Descendants<BookmarkStart>()
+                    .Where(b => b.Name == bookmarkName);
+                if (footnoteBookmarks.Any())
+                    return footnoteBookmarks.First();
+            }
+
+            if (wordDoc.MainDocumentPart.EndnotesPart != null)
+            {
+                var endnoteBookmarks = wordDoc.MainDocumentPart.EndnotesPart.RootElement.Descendants<BookmarkStart>()
+                    .Where(b => b.Name == bookmarkName);
+                if (endnoteBookmarks.Any())
+                    return endnoteBookmarks.First();
+            }
+
+            // If not found, return null
+            return null;
+        }
+
         public static byte[] ConvertHexStringToByteArray(string hexString)
         {
             if (string.IsNullOrWhiteSpace(hexString))
@@ -365,57 +267,52 @@ namespace BookMarks
         {
             string connectionString = "Server=localhost;Database=CenteralUserInfo;User Id=sa;Password=Aa@12345;";
             string query = "SELECT FIRST_SIGNATURE FROM CenteralUserInfo.dbo.Pargar_USER_SIGN WHERE USER_NAME = @UserName";
-
             try
             {
                 using (SqlConnection connection = new SqlConnection(connectionString))
+                using (SqlCommand command = new SqlCommand(query, connection))
                 {
+                    command.Parameters.AddWithValue("@UserName", userName);
+                    connection.Open();
 
-                    using (SqlCommand command = new SqlCommand(query, connection))
+                    var result = command.ExecuteScalar();
+
+                    if (result == null || result == DBNull.Value)
                     {
-                        command.Parameters.AddWithValue("@UserName", userName);
-                        connection.Open();
+                        Console.WriteLine($"No data found for user: {userName}");
+                        return null;
+                    }
 
-                        var result = command.ExecuteScalar();
+                    if (result is string base64String) // Check if the data is a string
+                    {
+                        Console.WriteLine($"Base64 string data retrieved for user: {userName}");
+                        return Convert.FromBase64String(base64String); // Decode Base64 string to binary
+                    }
 
-                        if (result == null || result == DBNull.Value)
+                    if (result is byte[] binaryData) // Check if the data is binary
+                    {
+                        Console.WriteLine($"Binary data retrieved for user: {userName}");
+                        return binaryData;
+                    }
+
+                    if (result is string hexString)
+                    {
+                        Console.WriteLine($"Hex string data retrieved for user: {userName}");
+
+                        try
                         {
-                            Console.WriteLine($"No data found for user: {userName}");
+                            return ConvertHexStringToByteArray(hexString);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Error converting hex string to byte array: {ex.Message}");
                             return null;
                         }
-
-                        if (result is string hexString)
-                        {
-                            Console.WriteLine($"Hex string data retrieved for user: {userName}");
-
-                            try
-                            {
-                                return ConvertHexStringToByteArray(hexString);
-                            }
-                            catch (Exception ex)
-                            {
-                                Console.WriteLine($"Error converting hex string to byte array: {ex.Message}");
-                                return null;
-                            }
-                        }
-
-                        if (result is byte[] byteArray)
-                        {
-                            Console.WriteLine($"Binary data retrieved for user: {userName}");
-                            return byteArray;
-                        }
-
-                        if (result is string base64String) // Check if the data is a string
-                        {
-                            Console.WriteLine($"Base64 string data retrieved for user: {userName}");
-                            return Convert.FromBase64String(base64String); // Decode Base64 string to binary
-                        }
-                        else
-                        {
-                            Console.WriteLine($"Unexpected data type for user: {userName}. Data type: {result.GetType()}");
-                            return null;
-                        }
-
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Unexpected data type for user: {userName}. Data type: {result.GetType()}");
+                        return null;
                     }
                 }
             }
@@ -426,26 +323,27 @@ namespace BookMarks
             }
         }
 
-        public static string ProcessBinaryImage(Dictionary<string, string> bookmarksContent)
+        public static void ProcessBinaryImages(Dictionary<string, string> textBookmarksContent, Dictionary<string, byte[]> imageBookmarksContent)
         {
-            var key = bookmarksContent.Keys.First(); // Get the single key
-            var value = bookmarksContent[key];
-            string userName = value.Substring(8); // Extract user name
-            byte[] imageData = GetImageDataFromDatabase(userName); // Fetch binary data
-            if (imageData != null)
+            foreach (var key in bookmarksContent.Keys.ToList())
             {
-                string tempFilePath = SaveImageToTempFile(imageData);
-                Console.WriteLine($"Temporary file created at: {tempFilePath}"); // Debug info
-                if (File.Exists(tempFilePath))
+                if (bookmarksContent[key].StartsWith("@Binary:"))
                 {
-                    return tempFilePath;
+                    string userName = bookmarksContent[key].Substring(8); // Extract user name
+                    byte[] imageData = GetImageDataFromDatabase(userName); // Fetch binary data
+
+                    if (imageData != null)
+                    {
+                        string tempFilePath = SaveImageToTempFile(imageData);
+                        Console.WriteLine($"Temporary file created at: {tempFilePath}"); // Debug info
+                        bookmarksContent[key] = tempFilePath; // Replace marker with temp file path
+                    }
+                    else
+                    {
+                        Console.WriteLine($"No image data found for user: {userName}");
+                        bookmarksContent[key] = string.Empty; // Clear the marker if no data found
+                    }
                 }
-                else {
-                    return "error";
-                }
-            }
-            else {
-                return "error";
             }
         }
 
@@ -456,30 +354,7 @@ namespace BookMarks
             File.WriteAllBytes(tempFilePath, imageData);
             return tempFilePath;
         }
-
-        public static string GenerateQRCodeImage(string qrCodeText)
-        {
-            // Create a new instance of the QRCodeGenerator
-            using (QRCodeGenerator qrGenerator = new QRCodeGenerator())
-            {
-                // Create a QR Code data
-                QRCodeData qrCodeData = qrGenerator.CreateQrCode(qrCodeText, QRCodeGenerator.ECCLevel.Q);
-
-                // Create a QRCode object from the data
-                using (QRCode qrCode = new QRCode(qrCodeData))
-                {
-                    // Create the QR code image
-                    using (Bitmap qrCodeImage = qrCode.GetGraphic(20)) // The '20' is the pixel size multiplier for the code
-                    {
-                        // Save the image to a temporary file
-                        string tempFilePath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), Guid.NewGuid().ToString() + ".png");
-                        qrCodeImage.Save(tempFilePath, System.Drawing.Imaging.ImageFormat.Png);
-
-                        return tempFilePath; // Return the file path to the generated QR code
-                    }
-                }
-            }
-        }
+        */
 
 
 
@@ -487,32 +362,35 @@ namespace BookMarks
 
 
 
-        //private static (long width, long height) GetImageDimensions(string imagePath, long maxWidthEmu = 3000000, long maxHeightEmu = 3000000)
-        //{
-        //    using (var image = SixLabors.ImageSharp.Image.Load(imagePath))
-        //    {
-        //        const int emusPerInch = 914400; // Conversion factor
+        
 
-        //        var dpiX = image.Metadata.HorizontalResolution > 0 ? image.Metadata.HorizontalResolution : 96; // Default DPI
-        //        var dpiY = image.Metadata.VerticalResolution > 0 ? image.Metadata.VerticalResolution : 96;
 
-        //        var widthEmu = (long)(image.Width * emusPerInch / dpiX);
-        //        var heightEmu = (long)(image.Height * emusPerInch / dpiY);
 
-        //        // Scale to fit within max dimensions
-        //        if (widthEmu > maxWidthEmu || heightEmu > maxHeightEmu)
-        //        {
-        //            double widthScale = (double)maxWidthEmu / widthEmu;
-        //            double heightScale = (double)maxHeightEmu / heightEmu;
-        //            double scale = Math.Min(widthScale, heightScale);
 
-        //            widthEmu = (long)(widthEmu * scale);
-        //            heightEmu = (long)(heightEmu * scale);
-        //        }
 
-        //        return (widthEmu, heightEmu);
-        //    }
-        //}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         //without qrcode
         /*
@@ -592,11 +470,12 @@ namespace BookMarks
         }
 
          */
+
         /*
         public static byte[] GetImageDataFromDatabase(string userName)
         {
-            string connectionString = "Server=.;Database=CentralUserInfo;User Id=sa;Password=Aa@12345;";
-            string query = "SELECT FIRST_SIGNATURE FROM CentralUserInfo.dbo.users WHERE user_name = @UserName";
+            string connectionString = "Server=.;Database=CenteralUserInfo;User Id=sa;Password=Aa@12345;";
+            string query = "SELECT FIRST_SIGNATURE FROM CenteralUserInfo.dbo.users WHERE user_name = @UserName";
 
             try
             {
@@ -648,8 +527,8 @@ namespace BookMarks
         /*
         public static byte[] GetImageDataFromDatabase(string userName)
         {
-            string connectionString = "Server=.;Database=CentralUserInfo;User Id=sa;Password=Aa@12345;";
-            string query = "SELECT FIRST_SIGNATURE FROM CentralUserInfo.dbo.users WHERE user_name = @UserName";
+            string connectionString = "Server=.;Database=CenteralUserInfo;User Id=sa;Password=Aa@12345;";
+            string query = "SELECT FIRST_SIGNATURE FROM CenteralUserInfo.dbo.users WHERE user_name = @UserName";
 
             try
             {
@@ -694,8 +573,8 @@ namespace BookMarks
         /*
         public static byte[] GetImageDataFromDatabase(string userName)
         {
-            string connectionString = "Server=.;Database=CentralUserInfo;User Id=sa;Password=Aa@12345;";
-            string query = "SELECT FIRST_SIGNATURE FROM CentralUserInfo.dbo.users2 WHERE user_name = @UserName";
+            string connectionString = "Server=.;Database=CenteralUserInfo;User Id=sa;Password=Aa@12345;";
+            string query = "SELECT FIRST_SIGNATURE FROM CenteralUserInfo.dbo.users2 WHERE user_name = @UserName";
 
             try
             {
@@ -732,8 +611,8 @@ namespace BookMarks
         public static byte[] GetImageDataFromDatabase(string userName)
         {
             //string connectionString = "YourDatabaseConnectionStringHere"; // Replace with your connection string
-            string connectionString = "Server=.;Database=CentralUserInfo;User Id=sa;Password=Aa@12345;";
-            string query = "SELECT FIRST_SIGNATURE FROM CentralUserInfo.dbo.users WHERE user_name = @UserName";
+            string connectionString = "Server=.;Database=CenteralUserInfo;User Id=sa;Password=Aa@12345;";
+            string query = "SELECT FIRST_SIGNATURE FROM CenteralUserInfo.dbo.users WHERE user_name = @UserName";
 
             using (SqlConnection connection = new SqlConnection(connectionString))
             using (SqlCommand command = new SqlCommand(query, connection))
