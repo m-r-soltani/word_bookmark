@@ -22,68 +22,6 @@ namespace BookMarks
 {
     public class BookmarkOpenxml
     {
-        private static void EmptyBookmark(WordprocessingDocument wordDoc, BookmarkStart bookmarkStart, BookmarkEnd bookmarkEnd) {
-            // Manually iterate siblings to collect elements between BookmarkStart and BookmarkEnd
-            var elementsToRemove = new List<OpenXmlElement>();
-            for (var currentElement = bookmarkStart.NextSibling(); currentElement != null && currentElement != bookmarkEnd; currentElement = currentElement.NextSibling())
-            {
-                elementsToRemove.Add(currentElement);
-            }
-
-            // Remove the collected elements
-            foreach (var element in elementsToRemove)
-            {
-                element.Remove();
-            }
-        }
-
-        public static BookmarkStart FindBookmark(WordprocessingDocument wordDoc, string bookmarkName)
-        {
-            // Search bookmarks in the main document body
-            var bookmarks = wordDoc.MainDocumentPart.Document.Descendants<BookmarkStart>()
-                .Where(b => b.Name == bookmarkName);
-
-            if (bookmarks.Any())
-                return bookmarks.First();
-
-            // Search in headers
-            foreach (var header in wordDoc.MainDocumentPart.HeaderParts)
-            {
-                var headerBookmarks = header.RootElement.Descendants<BookmarkStart>()
-                    .Where(b => b.Name == bookmarkName);
-                if (headerBookmarks.Any())
-                    return headerBookmarks.First();
-            }
-            // Search in footers
-            foreach (var footer in wordDoc.MainDocumentPart.FooterParts)
-            {
-                var footerBookmarks = footer.RootElement.Descendants<BookmarkStart>()
-                    .Where(b => b.Name == bookmarkName);
-                if (footerBookmarks.Any())
-                    return footerBookmarks.First();
-            }
-
-            // Search in footnoteBookmarks
-            if (wordDoc.MainDocumentPart.FootnotesPart != null)
-            {
-                var footnoteBookmarks = wordDoc.MainDocumentPart.FootnotesPart.RootElement.Descendants<BookmarkStart>()
-                    .Where(b => b.Name == bookmarkName);
-                if (footnoteBookmarks.Any())
-                    return footnoteBookmarks.First();
-            }
-            // Search in endnoteBookmarks
-            if (wordDoc.MainDocumentPart.EndnotesPart != null)
-            {
-                var endnoteBookmarks = wordDoc.MainDocumentPart.EndnotesPart.RootElement.Descendants<BookmarkStart>()
-                    .Where(b => b.Name == bookmarkName);
-                if (endnoteBookmarks.Any())
-                    return endnoteBookmarks.First();
-            }
-
-            // If not found, return null
-            return null;
-        }
-
         public static void UpdateBookmarks(string filePath, Dictionary<string, string> bookmarksContent)
         {
             using (WordprocessingDocument wordDoc = WordprocessingDocument.Open(filePath, true))
@@ -95,7 +33,7 @@ namespace BookMarks
 
                     // Find the bookmark (this will give you the BookmarkStart)
                     var bookmarkStart = FindBookmark(wordDoc, bookmarkName);
-
+                    //Console.WriteLine(GetType(BookmarkStart));
                     if (bookmarkStart != null)
                     {
                         // Find the corresponding BookmarkEnd using the same Id
@@ -159,7 +97,7 @@ namespace BookMarks
                 wordDoc.MainDocumentPart.Document.Save();
             }
         }
-
+  
         /*before any changes
         public static void UpdateBookmarks(string filePath, Dictionary<string, string> bookmarksContent)
         {
@@ -228,6 +166,68 @@ namespace BookMarks
             }
         }
         */
+
+        private static void EmptyBookmark(WordprocessingDocument wordDoc, BookmarkStart bookmarkStart, BookmarkEnd bookmarkEnd) {
+            // Manually iterate siblings to collect elements between BookmarkStart and BookmarkEnd
+            var elementsToRemove = new List<OpenXmlElement>();
+            for (var currentElement = bookmarkStart.NextSibling(); currentElement != null && currentElement != bookmarkEnd; currentElement = currentElement.NextSibling())
+            {
+                elementsToRemove.Add(currentElement);
+            }
+
+            // Remove the collected elements
+            foreach (var element in elementsToRemove)
+            {
+                element.Remove();
+            }
+        }
+
+        public static BookmarkStart FindBookmark(WordprocessingDocument wordDoc, string bookmarkName)
+        {
+            // Search bookmarks in the main document body
+            var bookmarks = wordDoc.MainDocumentPart.Document.Descendants<BookmarkStart>()
+                .Where(b => b.Name == bookmarkName);
+
+            if (bookmarks.Any())
+                return bookmarks.First();
+
+            // Search in headers
+            foreach (var header in wordDoc.MainDocumentPart.HeaderParts)
+            {
+                var headerBookmarks = header.RootElement.Descendants<BookmarkStart>()
+                    .Where(b => b.Name == bookmarkName);
+                if (headerBookmarks.Any())
+                    return headerBookmarks.First();
+            }
+            // Search in footers
+            foreach (var footer in wordDoc.MainDocumentPart.FooterParts)
+            {
+                var footerBookmarks = footer.RootElement.Descendants<BookmarkStart>()
+                    .Where(b => b.Name == bookmarkName);
+                if (footerBookmarks.Any())
+                    return footerBookmarks.First();
+            }
+
+            // Search in footnoteBookmarks
+            if (wordDoc.MainDocumentPart.FootnotesPart != null)
+            {
+                var footnoteBookmarks = wordDoc.MainDocumentPart.FootnotesPart.RootElement.Descendants<BookmarkStart>()
+                    .Where(b => b.Name == bookmarkName);
+                if (footnoteBookmarks.Any())
+                    return footnoteBookmarks.First();
+            }
+            // Search in endnoteBookmarks
+            if (wordDoc.MainDocumentPart.EndnotesPart != null)
+            {
+                var endnoteBookmarks = wordDoc.MainDocumentPart.EndnotesPart.RootElement.Descendants<BookmarkStart>()
+                    .Where(b => b.Name == bookmarkName);
+                if (endnoteBookmarks.Any())
+                    return endnoteBookmarks.First();
+            }
+
+            // If not found, return null
+            return null;
+        }
 
         private static void InsertImageAtBookmark(WordprocessingDocument wordDoc, BookmarkStart bookmark, string imagePath)
         {
@@ -435,7 +435,6 @@ namespace BookMarks
             if (imageData != null)
             {
                 string tempFilePath = SaveImageToTempFile(imageData);
-                Console.WriteLine($"Temporary file created at: {tempFilePath}"); // Debug info
                 if (File.Exists(tempFilePath))
                 {
                     return tempFilePath;

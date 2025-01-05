@@ -17,58 +17,46 @@ namespace bookmark1.Controllers
 
         public IActionResult Index()
         {
-            /////////////////////////////////insert image/////////////////////////////////
-            //string connectionString = "Server=.;Database=CentralUserInfo;User Id=sa;Password=Aa@12345;";
-            //string userName = "222";
-            //string pngpath = @"C:\mydocs\img\1.png";
-            //UserImageHandler.UserImageHandler.InsertUserWithImage(userName, pngpath, connectionString);
-            /////////////////////////////////test qrcode/////////////////////////////////
-            //string qrImagePath = BookMarks.BookmarkOpenxml.GenerateQRCodeImage("Test QR Code");
-            //Console.WriteLine($"Generated QR code image at: {qrImagePath}");
-            /////////////////////////////////bookmark/////////////////////////////////
-
-
-            //PersianCalendar pc = new PersianCalendar();
-            //Console.WriteLine();
-            //DateTime thisDate = DateTime.Now;
-
-
-
-
-
-            //////////////////////////////////////////////////////////////////bm4 namespace
-            //bm4.Program.Main();
-
-
-
 
 
             //////////////////////////////////////////////////////////////////Bookmarks namespace
+            //string docPath = @"C:\mydocs\f1.docx";
+            //var bookmarksContent = new Dictionary<string, string>
+            //{
+            //    //{ "تصویر_واحد_سازمانی",  @"C:\mydocs\img\1.png" },
+            //    { "واحد_سازمانی", "بازرسی کل استان تست" },
+            //    { "تاریخ_خورشیدی",  DateTime.Now.ToString("dd-MM-yyyy") },
+            //    { "پیوست", "ندارد"  },
+            //    { "گیرندگان_رونوشت","تستی تستیان"  },
+            //    { "رونوشت","تستی تستیان"  },
+            //    { "شماره_ثبت","127126"  },
+            //    { "طبقه_بندی","غیر محرمانه"  },
+            //    { "عنوان_محترمانه_کامل_گیرندگان_رونوشت","تستی تستیان"  },
+            //    { "فوریت", "فوری" },
+            //    { "نام_و_نام_خانوادگی_فرستنده","تستی تستیان"  },
+            //    //{ "نوع_جایگاه_امضاکننده_اصلی","تستی تستیان4"  },
+            //    { "آدرس_جایگاه_فرستنده", "تهران - خیابان طالقانی سازمان بازرسی کشور"  },
+            //    { "اهمیت_", "مهم"  },
+            //    { "بارکد_شمس", "QRCode"  },
+            //    { "امضای_اصلی", "@Binary:6930"  },
+            //    { "گیرندگان_اصلی","جناب آقای تستی تستیان \r\n رییس محترم شورای اسلامی شهر"  },
+            //    { "نوع_جایگاه_امضاکننده_اصلی", "تستی تستیان"  },
+            //};
+            //BookmarkOpenxml.UpdateBookmarks(docPath, bookmarksContent);
+            //////////////////////////////////////Example simple text//////////////////////////////////////////
             string docPath = @"C:\mydocs\f1.docx";
             var bookmarksContent = new Dictionary<string, string>
             {
-                //{ "تصویر_واحد_سازمانی",  @"C:\mydocs\img\1.png" },
-                { "واحد_سازمانی", "بازرسی کل استان تست" },
-                { "تاریخ_خورشیدی",  DateTime.Now.ToString("dd-MM-yyyy") },
-                { "پیوست", "ندارد"  },
-                { "گیرندگان_رونوشت","تستی تستیان"  },
-                { "رونوشت","تستی تستیان"  },
-                { "شماره_ثبت","127126"  },
-                { "طبقه_بندی","غیر محرمانه"  },
-                { "عنوان_محترمانه_کامل_گیرندگان_رونوشت","تستی تستیان"  },
-                { "فوریت", "فوری" },
-                { "نام_و_نام_خانوادگی_فرستنده","تستی تستیان"  },
-                //{ "نوع_جایگاه_امضاکننده_اصلی","تستی تستیان4"  },
-                { "آدرس_جایگاه_فرستنده", "تهران - خیابان طالقانی سازمان بازرسی کشور"  },
-                { "اهمیت_", "مهم"  },
-                { "بارکد_شمس", "QRCode"  },
-                { "امضای_اصلی", "@Binary:6930"  },
-                { "گیرندگان_اصلی","جناب آقای تستی تستیان \r\n رییس محترم شورای اسلامی شهر"  },
-                { "نوع_جایگاه_امضاکننده_اصلی", "تستی تستیان"  },
+                { "واحد_سازمانی", "111" },
+                { "تصویر_واحد_سازمانی", "2222" },
+                { "بارکد_شمس", "333" },
+                { "تاریخ_خورشیدی", "4444" },
+                //{ "بارکد_شمس", "QRCode:6162" },
+                //{ "تصویر_واحد_سازمانی", @"C:\mydocs\img\1.png" },
+                //{ "تصویر_واحد_سازمانی2", "Binary:6930" },
             };
-            BookmarkOpenxml.UpdateBookmarks(docPath, bookmarksContent);
-
-
+            //BookmarkOpenxml.UpdateBookmarks(docPath, bookmarksContent);
+            BMH.BMH.UpdateTextBookmarks(docPath, bookmarksContent);
 
 
 
@@ -87,6 +75,16 @@ namespace bookmark1.Controllers
             //{
             //    Console.WriteLine($"An error occurred: {ex.Message}");
             //}
+
+
+            //////////////////////////////////////BM Helper Docx To Pdf//////////////////////////////////////////
+
+
+            //OfficeHandler.WordHandler.ConvertWordToPdfWithLibreOffice(@"C:\mydocs\f1.docx", @"C:\mydocs\pdf\aaa.pdf");
+            //OfficeHandler.WordHandler.ConvertWordToPdf();
+            //OfficeHandler.WordHandler.docxtopdfapose();
+            //OfficeHandler.WordHandler.ConvertWordToPdf();
+            //////////////////////////////////////BM Helper Docx To Pdf//////////////////////////////////////////
             return View();
         }
 
